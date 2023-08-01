@@ -69,7 +69,7 @@ const Demo = () => {
   // * Function to check the status of articles with 'processing' status
   const checkArticleStatus = async (articles) => {
     for (const article of articles) {
-      if ((article.status === "processing" || !article.status) && article.video_id) {
+      if ((article.status === "processing" || article.status === "none") && article.video_id) {
         try {
           const { data } = await getVideo({ video_id: article.video_id });
 
