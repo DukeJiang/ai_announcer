@@ -1,1 +1,1 @@
-# ai_summarizer
+# ai_announcer

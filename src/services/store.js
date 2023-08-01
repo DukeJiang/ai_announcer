@@ -1,10 +1,10 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import { voiceoverApi } from "./article";
+import { announcerApi } from "./announce";
 
 export const store = configureStore({
     reducer: {
-        [voiceoverApi.reducerPath]: voiceoverApi.reducer,
+        [announcerApi.reducerPath]: announcerApi.reducer,
     },
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(voiceoverApi.middleware)
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(announcerApi.middleware)
 })

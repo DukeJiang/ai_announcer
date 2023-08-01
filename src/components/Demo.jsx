@@ -1,35 +1,47 @@
 import React, { useState, useEffect } from "react";
 
 import { copy, linkIcon, loader, tick } from "../assets";
-import { useLazyGetVoicesQuery, usePostTextMutation } from "../services/article";
+import { useLazyGetVoicesQuery, useLazyGetVideoQuery, usePostVideoMutation } from "../services/announce";
 
 const Demo = () => {
-  const [selectedVoice, setSelectedVoice] = useState("en-US-1");
+  const [selectedVideo, setSelectedVideo] = useState({});
+  const [selectedVoice, setSelectedVoice] = useState();
   const [allVoices, setAllVoices] = useState([]);
   const [article, setArticle] = useState({
-    voice_code: "en-US-1",
-    text: "",
-    audio_url: "",
+    background: "#ffffff",
+    avatar_id: "Tina-insuit-20220821",
+    voice_id: "00c8fd447ad7480ab1785825978a2215",
+    input_text: "",
+    avatar_style: "normal",
+    status: "none"
   });
   const [allArticles, setAllArticles] = useState([]);
   const [copied, setCopied] = useState("");
 
-  // RTK lazy query
-  //const [getSummary, { error, isFetching }] = useLazyGetSummaryQuery();
+  // *  RTK lazy query
   const [getVoices, { isFetching }] = useLazyGetVoicesQuery();
-  const [postText, { error, isLoading }] = usePostTextMutation();
+  const [getVideo] = useLazyGetVideoQuery();
+  const [postVideo, { error, isLoading }] = usePostVideoMutation();
 
 
-  // Load data from localStorage on mount
+  // * Load data from localStorage on mount
   useEffect(() => {
-    // console.log("Executing useEffect")
-    (async () =>{ // immediatly execute async function
-      //load voices
-      const { data } = await getVoices();
-      // console.log(data)
-      if(data.voices){
-        // console.log(data.voices);
-        setAllVoices(data.voices);
+    (async () => {
+      console.log("Executing useEffect");
+      try {
+        // Load voices
+        const { data } = await getVoices();
+  
+        if (data.data.list) {
+          const chineseVoices = data.data.list.filter((voice) => voice.language === 'Chinese' && voice.gender === 'Female');
+          console.log("Chinese voices:", chineseVoices);
+  
+          // Set the filtered voices in the state
+          setAllVoices(chineseVoices);
+          setSelectedVoice(chineseVoices[0].display_name)
+        }
+      } catch (error) {
+        console.error("API call failed:", error);
       }
     })();
 
@@ -40,26 +52,65 @@ const Demo = () => {
 
     if (articlesFromLocalStorage) {
       setAllArticles(articlesFromLocalStorage);
+      checkArticleStatus(articlesFromLocalStorage);
     }
+
+    // Call checkArticleStatus every 30 seconds
+    const interval = setInterval(() => {
+      console.log('Checking rendering status again')
+      checkArticleStatus(allArticles);
+    }, 10000);
+
+    // Clear the interval when the component is unmounted
+    return () => clearInterval(interval);
+      
   }, []);
 
+  // * Function to check the status of articles with 'processing' status
+  const checkArticleStatus = async (articles) => {
+    for (const article of articles) {
+      if ((article.status === "processing" || !article.status) && article.video_id) {
+        try {
+          const { data } = await getVideo({ video_id: article.video_id });
 
+          if (data && data.data.status === "completed") {
+            // If status has changed to 'completed', update the article's status
+            const updatedArticle = { ...article, status: "completed", video_url: data.data.video_url };
+            setAllArticles((prevArticles) =>
+              prevArticles.map((prevArticle) =>
+                prevArticle.id === updatedArticle.id ? updatedArticle : prevArticle
+              )
+            );
+          }
+        } catch (error) {
+          console.log("API call failed:", error);
+        }
+      }
+    }
+  };
+
+  // * Handle submit action PostVideo
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const existingArticle = allArticles.find(
-      (item) => item.text === article.text && item.voice_code === article.voice_code
+      (item) => item.input_text === article.input_text && item.voice_id === article.voice_id
     );
 
     if (existingArticle) return setArticle(existingArticle);
 
-    const { data } = await postText({ voice_code: article.voice_code, text: article.text });
-    // const { voices_data } = await getVoices();
-    // if( voices_data?.voices ){
-    //   console.log(voices_data)
-    // }
-    if (data?.result.audio_url) {
-      const newArticle = { ...article, audio_url: data.result.audio_url };
+    const options = {
+      background: article.background,
+      avatar_id: article.avatar_id,
+      voice_id: article.voice_id, 
+      input_text: article.input_text,
+      avatar_style: article.avatar_style
+    }
+    const { data } = await postVideo(options);
+
+    if (data?.data.video_id) {
+      console.log(`returned video id is ${data.data.video_id}`)
+      const newArticle = { ...article, video_id: data.data.video_id };
       const updatedAllArticles = [newArticle, ...allArticles];
 
       // update state and local storage
@@ -69,11 +120,16 @@ const Demo = () => {
     }
   };
 
-  // copy the url and toggle the icon for user feedback
-  const handleCopy = (copyUrl) => {
-    setCopied(copyUrl);
-    navigator.clipboard.writeText(copyUrl);
-    setTimeout(() => setCopied(false), 3000);
+  // * select past script videos
+  const handleSelection = (video_id) => {
+    // Find the article in allArticles with the matching video_id
+    const selectedArticle = allArticles.find((article) => article.video_id === video_id);
+
+    // If a matching article is found, update the article state
+    if (selectedArticle) {
+      setArticle(selectedArticle);
+      console.log(article)
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -82,12 +138,13 @@ const Demo = () => {
     }
   };
 
+  // * Component rendering
   return (
     <div>
       <section>
-        {/* Display Audio */}
+        {/* Display Video */}
         <div className='my-10 max-w-full flex justify-center items-center'>
-          {isLoading ? (
+          {article.status === 'processing' ? (
             <img src={loader} alt='loader' className='w-20 h-20 object-contain' />
           ) : error ? (
             <p className='font-inter font-bold text-black text-center'>
@@ -98,19 +155,16 @@ const Demo = () => {
               </span>
             </p>
           ) : (
-            article.audio_url && (
+            article.video_url && (
               <div className='flex flex-col gap-3'>
                 <h2 className='font-satoshi font-bold text-gray-600 text-xl'>
-                  <span className='blue_gradient'>AUDIO CLIP</span>
+                  <span className='blue_gradient'>VIDEO CLIP</span>
                 </h2>
                 <div className='summary_box'>
-                  {/* <p className='font-inter font-medium text-sm text-gray-700'>
-                    {article.audio_url}
-                  </p> */}
                   <div className='flex justify-center items-center'>
-                    <audio controls key={article.audio_url}>
-                      <source src={article.audio_url} type='audio/mp3'/>
-                    </audio>
+                    <video controls key={article.video_url} width='400' height='300'>
+                      <source src={article.video_url} type='video/mp4' />
+                    </video>
                   </div>
                 </div>
               </div>
@@ -146,15 +200,17 @@ const Demo = () => {
           value = {selectedVoice}
           onChange={(event) => {
             setSelectedVoice(event.target.value);
-            setArticle({...article, voice_code: event.target.value})
+            setArticle({...article, voice_id: event.target.value})
+            console.log(`Selected voice: ${event.target.value}`)
+            console.log(allArticles)
           }}
           className="voice_dropdown">
           
               
           <option value="">Select a voice</option>
           {allVoices.map((item, index) => (
-            <option key={`voice-${index}`} value={item.voice_code}>
-              {item.voice_code}
+            <option key={`voice-${index}`} value={item.voice_id}>
+              {item.display_name}
             </option>
           ))}
 
@@ -176,8 +232,8 @@ const Demo = () => {
               <input
                 type='text'
                 placeholder='Paste the text you want voiceovered'
-                value={article.text}
-                onChange={(e) => setArticle({ ...article, text: e.target.value })}
+                value={article.input_text}
+                onChange={(e) => setArticle({ ...article, input_text: e.target.value })}
                 onKeyDown={handleKeyDown}
                 required
                 className='url_input peer' // When you need to style an element based on the state of a sibling element, mark the sibling with the peer class, and use peer-* modifiers to style the target element
@@ -192,7 +248,7 @@ const Demo = () => {
 
         {/* Browse History */}
         <h2 className='font-satoshi font-bold text-gray-600 text-xl'>
-                  <span className='blue_gradient'>HISTORY</span>
+                  <span className='blue_gradient'>RENDERINGS</span>
         </h2>
         <div className='flex flex-col gap-1 max-h-10 overflow-y-auto'>
           {allArticles.reverse().map((item, index) => (
@@ -201,19 +257,18 @@ const Demo = () => {
               onClick={() => {
                 console.log(item)
                 setArticle(item)
-                console.log(article)
               }}
               className='link_card'
             >
-              <div className='copy_btn' onClick={() => handleCopy(item.text)}>
+              <div className='copy_btn' onClick={() => handleSelection(item.video_id)}>
                 <img
-                  src={copied === item.text ? tick : copy}
-                  alt={copied === item.text ? "tick_icon" : "copy_icon"}
+                  src={copied === item.video_id ? tick : copy}
+                  alt={copied === item.video_id ? "tick_icon" : "copy_icon"}
                   className='w-[40%] h-[40%] object-contain'
                 />
               </div>
               <p className='flex-1 font-satoshi text-blue-700 font-medium text-sm truncate'>
-                {item.text.length > 100 ? `${item.text.substring(0, 100)}...` : item.text}
+                {item.input_text.length > 100 ? `${item.input_text.substring(0, 100)}...` : item.input_text}
               </p>
             </div>
           ))}
