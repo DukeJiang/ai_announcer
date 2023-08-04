@@ -55,7 +55,7 @@ const Demo = () => {
       checkArticleStatus(articlesFromLocalStorage);
     }
 
-    // Call checkArticleStatus every 30 seconds
+    // Call checkArticleStatus every 10 seconds
     const interval = setInterval(() => {
       console.log('Checking rendering status again')
       checkArticleStatus(allArticles);

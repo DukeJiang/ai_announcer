@@ -7,7 +7,7 @@ import DID from './components/DID';
 import "./App.css";
 
 const App = () => {
-  const [showDID, setShowDID] = useState(false);
+  const [showDID, setShowDID] = useState(true);
 
   // Function to toggle between <Demo /> and <DID />
   const toggleComponent = () => {

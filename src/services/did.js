@@ -25,28 +25,34 @@ export const didApi = createApi({
         }),
         postStartStream: builder.mutation({
             query: (params) =>({
-                url: `talks/streams`,
+                url: `talks/streams/${params.stream_id}/sdp`,
                 method: 'POST',
-                body: {
-                    source_url : avatar_url
+                body: { // TODO : map request body
+                    session_id : params.session_id,
+                    answer : params.answer
                 },
             })
         }),
         postNetworkInfo: builder.mutation({
             query: (params) =>({
-                url: `talks/streams`,
+                url: `talks/streams/${params.stream_id}/ice`,
                 method: 'POST',
-                body: {
-                    source_url : avatar_url
+                body: { // TODO : map request body
+                    session_id : params.session_id,
+                    candidate : params.candidate,
+                    sdpMid : params.sdpMid,
+                    sdpMLineIndex : params.sdpMLineIndex
                 },
             })
         }),
         postTalkStream: builder.mutation({
             query: (params) =>({
-                url: `talks/streams`,
+                url: `talks/streams/${params.stream_id}`,
                 method: 'POST',
                 body: {
-                    source_url : avatar_url
+                    session_id: params.session_id,
+                    driver_url: params.driver_url,
+                    script: params.script
                 },
             })
         }),
