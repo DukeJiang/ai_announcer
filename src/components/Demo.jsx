@@ -178,24 +178,6 @@ const Demo = () => {
         <h2 className='font-satoshi font-bold text-gray-600 text-xl'>
                   <span className='blue_gradient'>ALL VOICES</span>
         </h2>
-        {/* <div className='flex flex-wrap gap-1 max-h-10 overflow-y-auto'>
-          {allVoices.map((item, index) => (
-            <div
-              key={`voice-${index}`}
-              onClick={() => {
-                console.log(item)
-                setSelectedVoice(item.voice_code);
-                setArticle({...article, voice_code : item.voice_code})
-                console.log(article)
-              }}
-              className={`voice_card ${selectedVoice === item.voice_code ? 'highlighted' : ''}`}
-            >
-              <p className='flex-1 font-satoshi text-blue-700 font-medium text-sm truncate'>
-                {item.voice_code}
-              </p>
-            </div>
-          ))}
-        </div> */}
         <select
           value = {selectedVoice}
           onChange={(event) => {
