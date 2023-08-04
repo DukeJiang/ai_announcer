@@ -1,40 +1,47 @@
 import React, { useState, useEffect } from "react";
 import { copy, linkIcon, loader, tick } from "../../assets";
+import { useLazyGetVideoQuery, usePostVideoMutation } from "../../services/ali2d";
 
-import avatar20220130, * as $avatar20220130 from '@alicloud/avatar20220130';
-import OpenApi, * as $OpenApi from '@alicloud/openapi-client';
-import Util, * as $Util from '@alicloud/tea-util';
-import * as $tea from '@alicloud/tea-typescript';
 
 const Ali2d = () => {
 
-  const localNames = {
-    article: 'aliArticle'
-  };
+  var textInput;
+
   const [article, setArticle] = useState({});
-  const [allArticles, setAllArticles] = useState({});
-  const [submitted, setSubmitted] = useState(false);
+  const [submitText, setSubmitText] = useState();
+  const [allArticles, setAllArticles] = useState([]);
+
+  // RTK Query
+  const [getVideo] = useLazyGetVideoQuery();
+  const [postVideo, { error, isLoading }] = usePostVideoMutation();
 
   // initial mount
   useEffect(() => {
-    const localArticle = JSON.stringify(localStorage.getItem(localNames['article']));
-    if (localArticle) {
-
-    }
+    
   }, []);
   
   // state change on 'submitted'
   useEffect(() => {
-
+    console.log("current article updated");
     return () => {
 
     };
-  }, [submitted]);
+  }, [article]);
+
+  useEffect(() => {
+    console.log("submit text updated");
+    let current = new Date();
+    checkTaskStatus("76ecb3e0-9456-4418-9284-515f972f5eab").then(result => {
+      console.log(result);
+    });
+    
+    return () => {
+
+    };
+  }, [submitText]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log('submitting request')
-
+    e.preventDefault();   
     
   };
 
@@ -43,6 +50,21 @@ const Ali2d = () => {
       handleSubmit(e);
     }
   };
+  
+
+  const submmitTask = async (text) => {
+    
+  }
+
+  const checkTaskStatus = async (uuid) => {
+    console.log(article.taskUuid);
+    try {
+      const { data } = await getVideo({ taskUuid: uuid });
+      return data.body.data;
+    } catch (error) {
+      console.log("API call failed:", error);
+    }
+  }
 
   return (
     <div>
@@ -74,10 +96,8 @@ const Ali2d = () => {
                 <input
                     type='text'
                     placeholder='Paste the text you want voiceovered'
-                    value={info.article.input_text}
-                    onChange={(e) => setInfo({ 
-                        ...info, article: {...article, text: e.target.value}
-                    })}
+                    //value={article.input_text}
+                    onChange={(e) => textInput = e.target.value}
                     onKeyDown={handleKeyDown}
                     required
                     className='url_input peer'

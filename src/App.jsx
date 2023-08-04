@@ -3,6 +3,7 @@ import DemoHero from './components/DemoHero';
 import DIDHero from './components/DIDHero'
 import Demo from './components/Demo';
 import DID from './components/DID';
+import Ali2d from './components/Ali/Ali2d';
 
 import "./App.css";
 
@@ -38,6 +39,7 @@ const App = () => {
         </button>
         {showDID ? <DIDHero /> : <DemoHero />}
         {showDID ? <DID /> : <Demo />}
+        {showDID ? <div /> : <Ali2d />}
       </div>
     </main>
   )
