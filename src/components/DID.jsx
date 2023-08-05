@@ -16,16 +16,21 @@ const DID = () => {
       ).bind(window);
 
     const [textInput, setTextInput] = useState('');
-    //const [mediaStream, setMediaStream] = useState({srcObject : null, loop : false}); // Assuming you have access to the media stream
-    //const [peerConnection, setPeerConnection] = useState(); // ? RPCPeerConnection object
-    const [streamId, setStreamId] = useState(''); // ! needs to be useRef
-    const [sessionId, setSessionId] = useState(''); // ! needs to be useRef
-    const [sessionClientAnswer, setSessionClientAnswer] = useState(''); // ! needs to be useRef
-    const [statsIntervalId, setStatsIntervalId] = useState(); // ! needs to be useRef
-    const [videoIsPlaying, setVideoIsPlaying] = useState(false);
-    const [lastBytesReceived, setLastBytesReceived] = useState(0);
+    // const [streamId, setStreamId] = useState(''); // ! needs to be useRef
+    // const [sessionId, setSessionId] = useState(''); // ! needs to be useRef
+    // const [sessionClientAnswer, setSessionClientAnswer] = useState(''); // ! needs to be useRef
+    // const [statsIntervalId, setStatsIntervalId] = useState(); // ! needs to be useRef
+    // const [videoIsPlaying, setVideoIsPlaying] = useState(false);
+    // const [lastBytesReceived, setLastBytesReceived] = useState(0);
 
+    const streamId = useRef();
+    const sessionId = useRef();
+    const sessionClientAnswer = useRef();
+    const statsIntervalId = useRef();
+    const videoIsPlaying = useRef();
+    const lastBytesReceived = useRef();
     const peerConnection = useRef(null);
+
     const talkVideo = useRef(null); // ? ref to video dom element
     const peerStatusLabel = useRef(null); // ? ref to peerStatus dom element
     const iceStatusLabel = useRef(null); // ? ref to iceStatus dom element
@@ -40,18 +45,6 @@ const DID = () => {
     const [postTalkStream, { error: talkStreamError, isLoading: isTalkStreamLoading}] = usePostTalkStreamMutation();
     const [deleteStream] = useDeleteStreamMutation()
 
-    // * useEffects
-    // ? on mount, called once
-    useEffect(() => {
-        
-    }, []);
-
-    // // ? side effect for mediaStream state change
-    // useEffect(() => {
-    //     if (mediaStream && talkVideo.current) {
-    //       talkVideo.current.srcObject = mediaStream;
-    //     }
-    // }, [mediaStream]);
 
 
     // * Event Handlers
@@ -61,8 +54,8 @@ const DID = () => {
         console.log("handling talk");
         if (peerConnection.current?.signalingState === 'stable' || peerConnection.current?.iceConnectionState === 'connected'){
             const params = {
-                stream_id : streamId,
-                session_id : sessionId,
+                stream_id : streamId.current,
+                session_id : sessionId.current,
                 driver_url : 'bank://lively',
                 script: {
                     type: 'text',
@@ -70,7 +63,7 @@ const DID = () => {
                     provider: {
                         type: 'microsoft',
                         voice_id: 'en-US-JennyNeural',
-                        voice_config: {style: 'string', rate: '0.5', pitch: '+2st'}
+                        voice_config: {style: 'string', rate: '1', pitch: '+0st'}
                     },
                     input: textInput // TODO: need to pass in user input
                 }
@@ -98,12 +91,15 @@ const DID = () => {
         console.log(`Session response newSessionId is : ${newSessionId}`);
         //console.log(`Session response offer sdp is : ${offer['sdp']}`);
         console.log(`Session response first iceServerser is : ${iceServers[0]['urls']}`);
-        setStreamId(newStreamId);
-        setSessionId(newSessionId);
+        streamId.current = newStreamId;
+        sessionId.current = newSessionId;
+        // setStreamId(newStreamId);
+        // setSessionId(newSessionId);
 
         try{
             const answer = await createPeerConnection(offer, iceServers);
-            setSessionClientAnswer(answer);
+            sessionClientAnswer.current = answer;
+            // setSessionClientAnswer(answer);
         } catch (e){
             console.log('error during streaming setup', e);
             stopAllStreams();
@@ -112,9 +108,9 @@ const DID = () => {
         }
 
         const startStreamParams = {
-            stream_id : streamId,
-            session_id : sessionId,
-            answer: sessionClientAnswer
+            stream_id : streamId.current,
+            session_id : sessionId.current,
+            answer: sessionClientAnswer.current
         }
         const sdpResponse = await postStartStream(startStreamParams);
     };
@@ -125,8 +121,8 @@ const DID = () => {
         console.log("handling closing stream")
         
         const params = {
-            stream_id : streamId,
-            session_id : sessionId
+            stream_id : streamId.current,
+            session_id : sessionId.current
         }
         const { data } = await deleteStream(params);
 
@@ -145,7 +141,8 @@ const DID = () => {
         if (event.candidate) {
             const { candidate, sdpMid, sdpMLineIndex } = event.candidate;
             const params = {
-                stream_id : streamId,
+                stream_id : streamId.current,
+                session_id : sessionId.current,
                 candidate : candidate,
                 sdpMid : sdpMid,
                 sdpMLineIndex : sdpMLineIndex
@@ -174,7 +171,7 @@ const DID = () => {
     
     function onVideoStatusChange(videoIsPlaying, stream) {
         let status;
-        if (videoIsPlaying) {
+        if (videoIsPlaying.current) {
         status = 'streaming';
         const remoteStream = stream;
         setVideoElement(remoteStream);
@@ -200,17 +197,18 @@ const DID = () => {
             const stats = await peerConnection.current.getStats(event.track);
             stats.forEach((report) => {
                 if (report.type === 'inbound-rtp' && report.mediaType === 'video') {
-                const videoStatusChanged = videoIsPlaying !== report.bytesReceived > lastBytesReceived;
+                const videoStatusChanged = videoIsPlaying.current !== report.bytesReceived > lastBytesReceived.current;
         
                 if (videoStatusChanged) {
-                    setVideoIsPlaying(report.bytesReceived > lastBytesReceived);
+                    videoIsPlaying.current = (report.bytesReceived > lastBytesReceived.current);
                     onVideoStatusChange(videoIsPlaying, event.streams[0]);
                 }
-                setLastBytesReceived(report.bytesReceived);
+                lastBytesReceived.current = (report.bytesReceived);
                 }
             });
         }, 500);
-        setStatsIntervalId(intervalID)
+        // setStatsIntervalId(intervalID)
+        statsIntervalId.current = intervalID;
     }
 
     // * peerConnection related
@@ -230,24 +228,26 @@ const DID = () => {
         await peerConnection.current.setRemoteDescription(offer);
         console.log('set remote sdp OK');
 
-        const sessionClientAnswer = await peerConnection.current.createAnswer();
+        const answer = await peerConnection.current.createAnswer();
         console.log('create local sdp OK');
 
-        await peerConnection.current.setLocalDescription(sessionClientAnswer);
+        await peerConnection.current.setLocalDescription(answer);
         console.log('set local sdp OK');
 
-        return sessionClientAnswer;
+        return answer;
     }
 
     // TODO: need to implement setVideoElement(stream)
     function setVideoElement(stream){
         if (!stream) return;
-        talkVideo.srcObject = stream;
-        talkVideo.loop = false;
+        talkVideo.current.srcObject = stream;
+        talkVideo.current.loop = false;
+
+        talkVideo.current.style.transition = 'opacity 0.3s ease-in-out';
 
         // safari hotfix
-        if (talkVideo.paused){
-            talkVideo
+        if (talkVideo.current.paused){
+            talkVideo.current
                 .play()
                 .then((_) => {})
                 .catch((e) => {});
@@ -257,16 +257,16 @@ const DID = () => {
     // TODO: need to generate Rebecca's idle video
     // TODO: need to implement playIdleVideo
     function playIdleVideo(){
-        talkVideo.srcObject = undefined;
-        talkVideo.src = idle;
-        talkVideo.loop = true;
+        talkVideo.current.srcObject = undefined;
+        talkVideo.current.src = idle;
+        talkVideo.current.loop = true;
     }
 
     function stopAllStreams() {
-        if (talkVideo.srcObject) {
+        if (talkVideo.current.srcObject) {
           console.log('stopping video streams');
-          talkVideo.srcObject.getTracks().forEach((track) => track.stop());
-          talkVideo.srcObject = null;
+          talkVideo.current.srcObject.getTracks().forEach((track) => track.stop());
+          talkVideo.current.srcObject = null;
         }
     }
 
@@ -305,7 +305,7 @@ const DID = () => {
             <section>
                 {/* Display Video */}
                 <div className='my-10 max-w-full flex justify-center items-center'>
-                {isCreateStreamLoading || isStartStreamLoading || isNetworkInfoLoading || isTalkStreamLoading ? (
+                {isCreateStreamLoading || isStartStreamLoading || isNetworkInfoLoading ? (
                     <img src={loader} alt='loader' className='w-20 h-20 object-contain' />
                 ) : createStreamError || startStreamError || networkInfoError || talkStreamError ? (
                     <p className='font-inter font-bold text-black text-center'>
@@ -313,7 +313,7 @@ const DID = () => {
                     <br />
                     </p>
                 ) : (
-                    talkVideo.srcObject && (
+                    talkVideo && (
                     <div className='flex flex-col gap-3'>
                         <h2 className='font-satoshi font-bold text-gray-600 text-xl'>
                         <span className='blue_gradient'>VIDEO CLIP</span>
