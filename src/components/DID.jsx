@@ -356,7 +356,7 @@ const DID = () => {
             <section>
                 <button id="talk-button" type="button" onClick={handleTalk}
                     style={{
-                        backgroundColor: "#3490dc",
+                        backgroundColor: "orange",
                         color: "#ffffff",
                         padding: "10px 20px",
                         borderRadius: "4px",
@@ -371,8 +371,30 @@ const DID = () => {
             <section>
                 {/* <!-- added div#buttons --> */}
                 <div id="buttons">
-                    <button id="connect-button" type="button" onClick={handleCreateStream}>Connect</button><br />
-                    <button id="destroy-button" type="button" onClick={handleDeleteStream}>Disconnect</button>
+                    <button id="connect-button" type="button" onClick={handleCreateStream}
+                        style={{
+                            backgroundColor: "#3490dc",
+                            color: "#ffffff",
+                            padding: "5px 5px",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            outline: "none",
+                            border: "none",
+                          }}>Connect</button><br />
+                    <button id="destroy-button" type="button" onClick={handleDeleteStream}
+                        style={{
+                            backgroundColor: "#3490dc",
+                            color: "#ffffff",
+                            padding: "5px 5px",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            outline: "none",
+                            border: "none",
+                          }}>Disconnect</button>
                 </div>
 
                 {/* <!-- added div#status --> */}
