@@ -8,41 +8,59 @@ const Ali2d = () => {
   var textInput;
 
   const [article, setArticle] = useState({});
-  const [submitText, setSubmitText] = useState();
-  const [allArticles, setAllArticles] = useState([]);
 
   // RTK Query
   const [getVideo] = useLazyGetVideoQuery();
   const [postVideo, { error, isLoading }] = usePostVideoMutation();
-
-  // initial mount
-  useEffect(() => {
-    
-  }, []);
   
-  // state change on 'submitted'
+  // Events are driven by current working article update
   useEffect(() => {
     console.log("current article updated");
-    return () => {
-
-    };
+    console.log(article);
+    if (article.taskUuid) {
+      if (!article.url) {
+        console.log("setting up check timer");
+        const interval = setInterval(() => {
+          checkTaskStatus(article).then(result => {
+            if (result) {
+              console.log("clearing check timer");
+              clearInterval(interval); 
+            }
+          });
+        }, 10000);
+      } 
+      return;
+    }
+    console.log("new task received, submitting request")
+    submmitTask(article).then(result => {
+      console.log(result);
+      if (result && result.taskUuid) {
+        console.log("new task id received: " + result.taskUuid);  
+        setArticle({...article, taskUuid: result.taskUuid})
+      } else {
+        console.log("Error when requesting Ali 2D video");
+      }
+    }).catch(e => {
+      console.log("Error when requesting Ali 2D video");
+    });
   }, [article]);
 
-  useEffect(() => {
-    console.log("submit text updated");
-    let current = new Date();
-    checkTaskStatus("76ecb3e0-9456-4418-9284-515f972f5eab").then(result => {
-      console.log(result);
-    });
-    
-    return () => {
-
-    };
-  }, [submitText]);
-
+  /**
+   * Create current working article
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();   
-    
+    console.log("requesting new task")
+    if (!textInput){
+      console.log("ignoring invalid input")
+      return;
+    }
+    let current = new Date();
+    setArticle({
+      title: current.toLocaleString(),
+      text: textInput,
+      taskUuid: "",
+    })
   };
 
   const handleKeyDown = (e) => {
@@ -52,15 +70,31 @@ const Ali2d = () => {
   };
   
 
-  const submmitTask = async (text) => {
-    
+  const submmitTask = async (article) => {
+    if (!article || !article.text) return;
+    console.log("posting: " + article.text);
+    try {
+      const { data } = await postVideo({
+        title: article.title,
+        text: article.text,
+      });
+      return data.body.data;
+    } catch (error) {
+      console.log("API call failed:", error);
+    }
   }
 
-  const checkTaskStatus = async (uuid) => {
-    console.log(article.taskUuid);
+  const checkTaskStatus = async (article) => {
+    if (!article || !article.taskUuid) return;
+    if (article.url) return;
+    console.log("checking status: " + article.taskUuid);
     try {
-      const { data } = await getVideo({ taskUuid: uuid });
-      return data.body.data;
+      const { data } = await getVideo({ taskUuid: article.taskUuid });
+      let videoUrl = data.body.data.taskResult.videoUrl;
+      if (videoUrl) {
+        setArticle({...article, url: videoUrl});
+        return videoUrl;
+      }
     } catch (error) {
       console.log("API call failed:", error);
     }
@@ -70,17 +104,40 @@ const Ali2d = () => {
     <div>
         {/* head */}
         <header className='w-full flex justify-center items-center flex-col'>
-        <h1 className='head_text'>
-        <span className='orange_gradient '>WBG </span>
-            AI Announcer <br className='max-md:hidden' />
-        </h1>
-        <h2 className='desc'>
+
+        <h2 className='head_text'>
             Ali Digital Human API
         </h2>
         <h2 className='desc'>
             Choose input text below ⬇️
         </h2>
         </header>
+
+        {/* Display Video */}
+        <div className='my-10 max-w-full flex justify-center items-center'>
+          {article.taskUuid ? (
+            article.url ? (
+              article.url && (
+                <div className='flex flex-col gap-3'>
+                  <h2 className='font-satoshi font-bold text-gray-600 text-xl'>
+                    <span className='blue_gradient'>VIDEO CLIP</span>
+                  </h2>
+                  <div className='summary_box'>
+                    <div className='flex justify-center items-center'>
+                      <video controls key={article.url} width='400' height='300'>
+                        <source src={article.url} type='video/mp4' />
+                      </video>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <img src={loader} alt='loader' className='w-20 h-20 object-contain' />
+            )
+          ) : (
+            <div />
+          )}
+        </div>
 
         {/* text input */}
         <div>
@@ -96,7 +153,6 @@ const Ali2d = () => {
                 <input
                     type='text'
                     placeholder='Paste the text you want voiceovered'
-                    //value={article.input_text}
                     onChange={(e) => textInput = e.target.value}
                     onKeyDown={handleKeyDown}
                     required
@@ -109,11 +165,6 @@ const Ali2d = () => {
                 </div> 
             </form>
             </div>
-        </div>
-
-        {/* history */}
-        <div>
-
         </div>
     </div>
     
