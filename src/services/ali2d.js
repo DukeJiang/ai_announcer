@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
-const Ali_Endpoint = import.meta.env.VITE_ALI2D_HOST;
+//const Ali_Endpoint = import.meta.env.VITE_ALI2D_HOST;
+const Ali_Endpoint = 'ai-avatar-express.azurewebsites.net';
 
 export const ali2dAPI = createApi({
     reducerPath: 'ali2dAPI',
