@@ -34,7 +34,7 @@ export const announcerApi = createApi({
                             avatar_style: params.avatar_style,
                             caption: false,
                             input_text: params.input_text,
-                            offset: {x: 0, y: 0},
+                            offset: {x: 0, y: -0.21},
                             scale: 1,
                             voice_id: params.voice_id,
                         }
@@ -42,6 +42,7 @@ export const announcerApi = createApi({
                     ratio: '9:16',
                     test: false,
                     version: 'v1alpha',
+                    caption_open: true,
                     callback_id: 'string'
                 },
             })

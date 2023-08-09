@@ -46,6 +46,12 @@ const DID = () => {
     const [deleteStream] = useDeleteStreamMutation()
 
 
+    useEffect(() => {
+        return () =>{
+            clearInterval(statsIntervalId);
+        }
+    })
+
 
     // * Event Handlers
     // TODO: done
@@ -316,7 +322,7 @@ const DID = () => {
                     talkVideo && (
                     <div className='flex flex-col gap-3'>
                         <h2 className='font-satoshi font-bold text-gray-600 text-xl'>
-                        <span className='blue_gradient'>VIDEO CLIP</span>
+                        <span className='blue_gradient'>AI AVATAR</span>
                         </h2>
                         <div className='summary_box'>
                         <div className='flex justify-center items-center'>

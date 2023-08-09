@@ -8,7 +8,7 @@ const Demo = () => {
   const [selectedVoice, setSelectedVoice] = useState();
   const [allVoices, setAllVoices] = useState([]);
   const [article, setArticle] = useState({
-    background: "#ffffff",
+    background: "https://cdn.discordapp.com/attachments/1117846439561810051/1138484303425191966/Runway_2023-08-08T14_49_44.224Z_Upscale_Image_Upscaled_Image_1920_x_3412.jpg",
     avatar_id: "Tina-insuit-20220821",
     voice_id: "00c8fd447ad7480ab1785825978a2215",
     input_text: "",
@@ -55,11 +55,11 @@ const Demo = () => {
       checkArticleStatus(articlesFromLocalStorage);
     }
 
-    // Call checkArticleStatus every 10 seconds
+    // Call checkArticleStatus every 5 seconds
     const interval = setInterval(() => {
       console.log('Checking rendering status again')
       checkArticleStatus(allArticles);
-    }, 10000);
+    }, 5000);
 
     // Clear the interval when the component is unmounted
     return () => clearInterval(interval);
@@ -78,7 +78,7 @@ const Demo = () => {
             const updatedArticle = { ...article, status: "completed", video_url: data.data.video_url };
             setAllArticles((prevArticles) =>
               prevArticles.map((prevArticle) =>
-                prevArticle.id === updatedArticle.id ? updatedArticle : prevArticle
+                prevArticle.video_id === updatedArticle.video_id ? updatedArticle : prevArticle
               )
             );
           }
@@ -97,7 +97,10 @@ const Demo = () => {
       (item) => item.input_text === article.input_text && item.voice_id === article.voice_id
     );
 
-    if (existingArticle) return setArticle(existingArticle);
+    if (existingArticle){
+      console.log('Video already exist');
+      return setArticle(existingArticle)
+    }
 
     const options = {
       background: article.background,
@@ -106,11 +109,12 @@ const Demo = () => {
       input_text: article.input_text,
       avatar_style: article.avatar_style
     }
+    console.log(options)
     const { data } = await postVideo(options);
 
     if (data?.data.video_id) {
       console.log(`returned video id is ${data.data.video_id}`)
-      const newArticle = { ...article, video_id: data.data.video_id };
+      const newArticle = { ...article, video_id: data.data.video_id, video_url: '', status: 'processing'  };
       const updatedAllArticles = [newArticle, ...allArticles];
 
       // update state and local storage
