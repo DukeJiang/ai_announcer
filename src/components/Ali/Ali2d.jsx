@@ -8,6 +8,7 @@ const Ali2d = () => {
   var textInput;
 
   const [article, setArticle] = useState({});
+  const [message, setMessage] = useState("");
 
   // RTK Query
   const [getVideo] = useLazyGetVideoQuery();
@@ -19,13 +20,15 @@ const Ali2d = () => {
     console.log(article);
     if (article.taskUuid) {
       if (!article.url) {
+        setMessage("Successfully sent request");
         console.log("setting up check timer");
         const interval = setInterval(() => {
+          setMessage("");
           checkTaskStatus(article).then(result => {
             if (result) {
               console.log("clearing check timer");
               clearInterval(interval); 
-            }
+            };
           });
         }, 10000);
       } 
@@ -73,6 +76,7 @@ const Ali2d = () => {
   const submmitTask = async (article) => {
     if (!article || !article.text) return;
     console.log("posting: " + article.text);
+    setMessage("Sending render request...")
     try {
       const { data } = await postVideo({
         title: article.title,
@@ -81,6 +85,7 @@ const Ali2d = () => {
       return data.body.data;
     } catch (error) {
       console.log("API call failed:", error);
+      setMessage("Failed sending render request")
     }
   }
 
@@ -98,6 +103,10 @@ const Ali2d = () => {
     } catch (error) {
       console.log("API call failed:", error);
     }
+  }
+
+  const handleResult = (result) => {
+    
   }
 
   return (
@@ -166,6 +175,9 @@ const Ali2d = () => {
             </form>
             </div>
         </div>
+
+        {/* System messgae */}
+        <div><h3>{message}</h3></div>
     </div>
     
   );
