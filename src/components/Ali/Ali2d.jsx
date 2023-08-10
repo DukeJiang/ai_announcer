@@ -5,6 +5,15 @@ import { useLazyGetVideoQuery, usePostVideoMutation } from "../../services/ali2d
 
 const Ali2d = () => {
 
+  const ALI_STATUS_CODES =  {
+    "1":"等待执行", 
+    "2": "执行中",
+    "3": "成功",
+    "4": "失败",
+    "5": "已取消",
+    "6": "已过期",
+  }
+
   var textInput;
 
   const [article, setArticle] = useState({});
@@ -19,11 +28,13 @@ const Ali2d = () => {
     console.log("current article updated");
     console.log(article);
     if (article.taskUuid) {
-      if (!article.url) {
+      if (!article.url && article.loading) {
         setMessage("Successfully sent request");
         console.log("setting up check timer");
+        let retry = 0;
         const interval = setInterval(() => {
-          setMessage("");
+          retry++;
+          setMessage(`Checking status(${retry})...`);
           checkTaskStatus(article).then(result => {
             if (result) {
               console.log("clearing check timer");
@@ -36,10 +47,10 @@ const Ali2d = () => {
     }
     console.log("new task received, submitting request")
     submmitTask(article).then(result => {
-      console.log(result);
-      if (result && result.taskUuid) {
-        console.log("new task id received: " + result.taskUuid);  
-        setArticle({...article, taskUuid: result.taskUuid})
+      let uuid = result.data.taskUuid
+      if (uuid) {
+        console.log("new task id received: " + uuid);  
+        setArticle({...article, taskUuid: uuid, loading: true})
       } else {
         console.log("Error when requesting Ali 2D video");
       }
@@ -63,6 +74,7 @@ const Ali2d = () => {
       title: current.toLocaleString(),
       text: textInput,
       taskUuid: "",
+      loading: false,
     })
   };
 
@@ -72,7 +84,10 @@ const Ali2d = () => {
     }
   };
   
-
+  /**
+   * Submit new task
+   * @param {*} article 
+   */
   const submmitTask = async (article) => {
     if (!article || !article.text) return;
     console.log("posting: " + article.text);
@@ -82,38 +97,89 @@ const Ali2d = () => {
         title: article.title,
         text: article.text,
       });
-      return data.body.data;
+      return handleSubmitStatus(data);
     } catch (error) {
       console.log("API call failed:", error);
       setMessage("Failed sending render request")
     }
-  }
+  };
 
+  /**
+   * Query task current status
+   * @param {*} article 
+   */
   const checkTaskStatus = async (article) => {
     if (!article || !article.taskUuid) return;
     if (article.url) return;
     console.log("checking status: " + article.taskUuid);
     try {
       const { data } = await getVideo({ taskUuid: article.taskUuid });
-      let videoUrl = data.body.data.taskResult.videoUrl;
-      if (videoUrl) {
-        setArticle({...article, url: videoUrl});
-        return videoUrl;
-      }
+      return handleTaskStatus(data);
     } catch (error) {
       console.log("API call failed:", error);
     }
+  };
+
+  /**
+   * Handle server response for task creation
+   * @param {*} data 
+   */
+  const handleSubmitStatus = (data) => {
+    let result = data.body;
+    if (result) {
+      let submitSussess = result['success'];
+      let submitDesc = result['message'];
+      if (submitSussess) {
+        return result;
+      } else {
+        setMessage(submitDesc);
+      }
+    }
   }
 
-  const handleResult = (result) => {
-    
-  }
+  /**
+   * Handle server response for task status query
+   * @param {*} data
+   */
+  const handleTaskStatus = (data) => {
+    let current = new Date();
+    let result = data.body.data;
+    let ifStop = false
+    if (result) {
+      let statusCode = result['status'];
+      let statusDesc = result['taskResult'];
+      let resultStr = ALI_STATUS_CODES[statusCode];
+      switch (statusCode) {
+        case '1':
+        case '2':
+          break;
+        case '3':
+          ifStop = true;
+          resultStr += "\n"
+          resultStr += `视频: ${statusDesc['videoUrl']}` + "\n";
+          resultStr += `字幕: ${statusDesc['subtitlesUrl']}` + "\n";
+          setArticle({...article, url: statusDesc['videoUrl'], loading: false});
+          break;
+        case '4':
+          ifStop = true;
+          resultStr += ` ${statusDesc['failReason']}`
+          setArticle({...article, loading: false});;
+          break;
+        case '5':
+        case '6':
+          ifStop = true;
+          setArticle({...article, loading: false});;
+          break;
+      }
+      setMessage(`${current.toTimeString()} \n${resultStr}`);
+    } else setMessage("Failed to check status");
+    return ifStop;
+  };
 
   return (
     <div>
         {/* head */}
         <header className='w-full flex justify-center items-center flex-col'>
-
         <h2 className='head_text'>
             Ali Digital Human API
         </h2>
@@ -141,7 +207,11 @@ const Ali2d = () => {
                 </div>
               )
             ) : (
-              <img src={loader} alt='loader' className='w-20 h-20 object-contain' />
+              article.loading ? (
+                <img src={loader} alt='loader' className='w-20 h-20 object-contain' />
+              ) : (
+                <div />
+              )
             )
           ) : (
             <div />
@@ -177,7 +247,7 @@ const Ali2d = () => {
         </div>
 
         {/* System messgae */}
-        <div><h3>{message}</h3></div>
+        <div style={{whiteSpace: "pre-line"}}>{message}</div>
     </div>
     
   );
